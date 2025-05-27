@@ -78,7 +78,7 @@ include $(top_srcdir)/../multilib.am
 TEXINFO_TEX = ../texinfo/texinfo.tex
 
 if HAVE_DOC
-include doc/Makefile.inc
+# include doc/Makefile.inc
 endif
 if CONFIG_AARCH64
 include aarch64/Makefile.inc

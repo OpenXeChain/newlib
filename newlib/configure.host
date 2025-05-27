@@ -442,6 +442,9 @@ case "${host}" in
 	posix_dir=posix
 	unix_dir=unix
 	;;
+  *-xbox360*)			
+	sys_dir=xbox360
+  ;;
   *-*-tirtos*)
 	sys_dir=tirtos
 	have_crt0="no"

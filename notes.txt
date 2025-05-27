@@ -1,0 +1,14 @@
+to make it work with the latest newlib 4.5.0:
+- use EXACTLY autoconf 2.69 and automake 1.15.1
+- use LF line endings on all autoconf files
+- build with
+
+mkdir build-newlib
+cd build-newlib
+CC="/c/Users/Tim/llvm-project/llvm/build/Debug/bin/clang -target ppc32-xbox360 -fdeclspec -nostdlib" \
+LD="/c/Users/Tim/llvm-project/llvm/build/Debug/bin/lld-link" \
+AR="/c/Users/Tim/llvm-project/llvm/build/Debug/bin/llvm-ar" \
+AS="/c/Users/Tim/llvm-project/llvm/build/Debug/bin/llvm-as" \
+../newlib/configure --target=ppc-xbox360 --host=ppc-xbox360 --enable-newlib-supplied-syscalls=yes
+make -j8
+make DESTDIR=/c/Users/Tim/360libc/sysroot/ install

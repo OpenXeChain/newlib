@@ -24,6 +24,7 @@ m4_foreach_w([SYS_DIR], [
   tic80 tirtos
   w65
   z8ksim
+  xbox360
 ], [AM_CONDITIONAL([HAVE_LIBC_SYS_]m4_toupper(SYS_DIR)[_DIR], test "${sys_dir}" = SYS_DIR)])
 
 AC_TYPE_LONG_DOUBLE
@@ -61,6 +62,7 @@ m4_foreach_w([MACHINE], [
   w65
   x86_64 xc16x xstormy16 xtensa
   z8k
+  xbox360
 ], [AM_CONDITIONAL([HAVE_LIBC_MACHINE_]m4_toupper(MACHINE), test "${machine_dir}" = MACHINE)])
 
 AM_CONDITIONAL(HAVE_FPMATH_H, test -r "${srcdir}/libc/machine/${machine_dir}/machine/_fpmath.h")

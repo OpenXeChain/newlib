@@ -33,6 +33,8 @@ POTFILES
 winsup/aclocal.m4
 winsup/configure
 winsup/**/Makefile.in
+build-newlib
+.vscode
 
 tags
 TAGS

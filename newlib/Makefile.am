@@ -444,7 +444,7 @@ XMLTO_MAN_QUIET_=--stringparam man.output.quietly=1
 XMLTO_MAN_QUIET=$(XMLTO_MAN_QUIET_$(V))
 
 if HAVE_DOC
-include doc/Makefile.inc
+# include doc/Makefile.inc
 endif
 include libc/Makefile.inc
 include libm/Makefile.inc
