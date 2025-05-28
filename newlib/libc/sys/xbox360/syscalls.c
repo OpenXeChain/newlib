@@ -13,7 +13,9 @@ int execve(char *name, char **argv, char **env);
 int fork();
 int fstat(int file, struct stat *st);
 int getpid();
-int isatty(int file);
+int isatty(int file) {
+    return 0;
+}
 int kill(int pid, int sig);
 int link(char *old, char *new);
 int lseek(int file, int ptr, int dir);

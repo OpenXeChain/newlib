@@ -203,10 +203,6 @@
 #define __IEEE_BIG_ENDIAN
 #endif
 
-#ifdef _WIN32
-#define __IEEE_LITTLE_ENDIAN
-#endif
-
 #ifdef __i386__
 #define __IEEE_LITTLE_ENDIAN
 # define _SUPPORTS_ERREXCEPT
@@ -319,7 +315,7 @@
 #if (defined(_BIG_ENDIAN) && _BIG_ENDIAN) || (defined(_AIX) && _AIX)
 #define __IEEE_BIG_ENDIAN
 #else
-#if (defined(_LITTLE_ENDIAN) && _LITTLE_ENDIAN) || (defined(__sun__) && __sun__) || (defined(_WIN32) && _WIN32)
+#if (defined(_LITTLE_ENDIAN) && _LITTLE_ENDIAN) || (defined(__sun__) && __sun__))
 #define __IEEE_LITTLE_ENDIAN
 #endif
 #endif
