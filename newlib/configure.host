@@ -444,6 +444,7 @@ case "${host}" in
 	;;
   *-xbox360*)			
 	sys_dir=xbox360
+	newlib_cflags="${newlib_cflags} -DMALLOC_PROVIDED"
   ;;
   *-*-tirtos*)
 	sys_dir=tirtos
