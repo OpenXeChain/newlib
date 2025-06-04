@@ -211,8 +211,8 @@ typedef	__uint32_t	__socklen_t;
 
 typedef	int		__nl_item;
 typedef	unsigned short	__nlink_t;
-typedef	long		__suseconds_t;	/* microseconds (signed) */
-typedef	unsigned long	__useconds_t;	/* microseconds (unsigned) */
+typedef	long long __suseconds_t;	/* microseconds (signed) */
+typedef	unsigned long long	__useconds_t;	/* microseconds (unsigned) */
 
 /*
  * Must be identical to the __GNUCLIKE_BUILTIN_VAALIST definition in

@@ -9,6 +9,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #define PAGE_NOACCESS 0x01
 #define PAGE_READONLY 0x02
@@ -35,113 +36,7 @@
 #define MEM_LARGE_PAGES 0x20000000
 #define MEM_HEAP 0x40000000
 #define MEM_16MB_PAGES 0x80000000
-#define EPOCH_BIAS 116444736000000000i64
-typedef long NTSTATUS;
-typedef unsigned long ACCESS_MASK;
-typedef struct _STRING
-{
-    unsigned short Length;
-    unsigned short MaximumLength;
-    char *Buffer;
-} STRING, *PSTRING;
-typedef PSTRING POBJECT_STRING;
-
-typedef struct _IO_STATUS_BLOCK
-{
-    union
-    {
-        NTSTATUS Status;
-        void *Pointer;
-    } st;
-    unsigned long *Information;
-} IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
-
-typedef struct _OBJECT_ATTRIBUTES
-{
-    void* RootDirectory;
-    POBJECT_STRING ObjectName;
-    unsigned long Attributes;
-} OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
-
-typedef union _LARGE_INTEGER
-{
-    struct
-    {
-        long HighPart;
-        unsigned int LowPart;
-    };
-    struct
-    {
-        long HighPart;
-        unsigned int LowPart;
-    } u;
-    long long QuadPart;
-} LARGE_INTEGER;
-
-typedef LARGE_INTEGER *PLARGE_INTEGER;
-
-
-NTSTATUS NtAllocateVirtualMemory(void **lpAddress, size_t *dwSize, unsigned int flAllocationType, unsigned int flProtect, unsigned int dwMemoryRegionType);
-NTSTATUS NtFreeVirtualMemory(void **BaseAddress, size_t *RegionSize, unsigned int FreeType);
-NTSTATUS NtCreateFile(unsigned int *FileHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PIO_STATUS_BLOCK IoStatusBlock, PLARGE_INTEGER AllocationSize, unsigned int FileAttributes, unsigned int ShareAccess, unsigned int CreateDisposition, unsigned int CreateOptions);
-void RtlInitAnsiString(PSTRING DestinationString, char *SourceString);
-
-void DbgPrint(const char *msg, ...);
-
-__attribute__((naked)) void RtlDebugPrintHelper(char *buffer, unsigned int len)
-{
-    __asm__("twui 0, 0x14\n\t"
-            "blr\n\t");
-}
-
-void _exit(int status)
-{
-    DbgPrint("LIBC: exit %d\r\n", status);
-}
-int close(int file)
-{
-    DbgPrint("LIBC: close %d\r\n", file);
-    return 0x60;
-}
-char **environ; /* pointer to array of char * strings that define the current environment variables */
-int execve(char *name, char **argv, char **env)
-{
-    DbgPrint("LIBC: execve\r\n");
-    return -1;
-}
-int fork()
-{
-    DbgPrint("LIBC: fork\r\n");
-    return -1;
-}
-int fstat(int file, struct stat *st)
-{
-    DbgPrint("LIBC: fstat %d\r\n", file);
-    return -1;
-}
-int getpid()
-{
-    return -1;
-}
-
-int isatty(int file)
-{
-    return 0;
-}
-
-int kill(int pid, int sig)
-{
-    return -1;
-}
-int link(char *old, char *new)
-{
-    return -1;
-}
-int lseek(int file, int ptr, int dir)
-{
-    DbgPrint("LIBC: lseek %d\r\n", file);
-    return -1;
-}
+#define EPOCH_BIAS 116444736000000000ULL
 
 #define GENERIC_READ (0x80000000L)
 #define GENERIC_WRITE (0x40000000L)
@@ -185,6 +80,291 @@ int lseek(int file, int ptr, int dir)
 
 #define _FBINARY 0x10000
 #define O_BINARY _FBINARY
+
+typedef struct _RTL_CRITICAL_SECTION
+{
+
+    union
+    {
+        unsigned long *RawEvent[4];
+    } Synchronization;
+    long LockCount;
+    long RecursionCount;
+    unsigned long OwningThread;
+} RTL_CRITICAL_SECTION, *PRTL_CRITICAL_SECTION;
+
+typedef long NTSTATUS;
+typedef unsigned long ACCESS_MASK;
+typedef struct _STRING
+{
+    unsigned short Length;
+    unsigned short MaximumLength;
+    char *Buffer;
+} STRING, *PSTRING;
+typedef PSTRING POBJECT_STRING;
+
+typedef struct _IO_STATUS_BLOCK
+{
+    union
+    {
+        NTSTATUS Status;
+        void *Pointer;
+    } st;
+    unsigned long Information;
+} IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
+
+typedef struct _FILETIME
+{
+    unsigned int dwHighDateTime;
+    unsigned int dwLowDateTime;
+} FILETIME, *PFILETIME, *LPFILETIME;
+
+typedef struct _OBJECT_ATTRIBUTES
+{
+    void *RootDirectory;
+    POBJECT_STRING ObjectName;
+    unsigned long Attributes;
+} OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
+
+typedef union _LARGE_INTEGER
+{
+    struct
+    {
+        unsigned int HighPart;
+        unsigned int LowPart;
+    };
+    long long QuadPart;
+} LARGE_INTEGER;
+typedef LARGE_INTEGER *PLARGE_INTEGER;
+
+typedef enum _FILE_INFORMATION_CLASS
+{
+    FileDirectoryInformation = 0x1,
+    FileFullDirectoryInformation = 0x2,
+    FileBothDirectoryInformation = 0x3,
+    FileBasicInformation = 0x4, // FILE_BASIC_INFORMATION below
+    FileStandardInformation = 0x5,
+    FileInternalInformation = 0x6,
+    FileEaInformation = 0x7,
+    FileAccessInformation = 0x8,
+    FileNameInformation = 0x9,
+    FileRenameInformation = 0xa,
+    FileLinkInformation = 0xb,
+    FileNamesInformation = 0xc,
+    FileDispositionInformation = 0xd, // use sdk FILE_DISPOSITION_INFO
+    FilePositionInformation = 0xe,    // FILE_POSITION_INFORMATION below
+    FileFullEaInformation = 0xf,
+    FileModeInformation = 0x10,
+    FileAlignmentInformation = 0x11,
+    FileAllInformation = 0x12,
+    FileAllocationInformation = 0x13, // use sdk FILE_ALLOCATION_INFO
+    FileEndOfFileInformation = 0x14,  // use sdk FILE_END_OF_FILE_INFO
+    FileAlternateNameInformation = 0x15,
+    FileStreamInformation = 0x16,
+    FileMountPartitionInformation = 0x17,
+    FileMountPartitionsInformation = 0x18,
+    FilePipeRemoteInformation = 0x19,
+    FileSectorInformation = 0x1a,
+    FileXctdCompressionInformation = 0x1b,
+    FileCompressionInformation = 0x1c,
+    FileObjectIdInformation = 0x1d,
+    FileCompletionInformation = 0x1e,
+    FileMoveClusterInformation = 0x1f,
+    FileIoPriorityInformation = 0x20,
+    FileReparsePointInformation = 0x21,
+    FileNetworkOpenInformation = 0x22,
+    FileAttributeTagInformation = 0x23,
+    FileTrackingInformation = 0x24,
+    FileMaximumInformation = 0x25
+} FILE_INFORMATION_CLASS;
+
+typedef enum _FSINFOCLASS 
+{
+    FileFsVolumeInformation = 0x1,
+    FileFsLabelInformation = 0x2,
+    FileFsSizeInformation = 0x3,
+    FileFsDeviceInformation = 0x4,
+    FileFsAttributeInformation = 0x5,
+    FileFsControlInformation = 0x6,
+    FileFsFullSizeInformation = 0x7,
+    FileFsObjectIdInformation = 0x8,
+    FileFsMaximumInformation = 0x9,
+} FSINFOCLASS;
+
+typedef void (*PIO_APC_ROUTINE)(void *ApcContext, PIO_STATUS_BLOCK IoStatusBlock, unsigned long Reserved);
+
+//xboxkrnl
+NTSTATUS NtAllocateVirtualMemory(void **lpAddress, size_t *dwSize, unsigned int flAllocationType, unsigned int flProtect, unsigned int dwMemoryRegionType);
+NTSTATUS NtFreeVirtualMemory(void **BaseAddress, size_t *RegionSize, unsigned int FreeType);
+NTSTATUS NtCreateFile(unsigned int *FileHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PIO_STATUS_BLOCK IoStatusBlock, PLARGE_INTEGER AllocationSize, unsigned int FileAttributes, unsigned int ShareAccess, unsigned int CreateDisposition, unsigned int CreateOptions);
+NTSTATUS NtReadFile(unsigned int FileHandle, unsigned int Event, PIO_APC_ROUTINE ApcRoutine, void *ApcContext, PIO_STATUS_BLOCK IoStatusBlock, void *Buffer, unsigned int Length, PLARGE_INTEGER ByteOffset);
+NTSTATUS NtWriteFile(unsigned int FileHandle, unsigned int Event, PIO_APC_ROUTINE ApcRoutine, void *ApcContext, PIO_STATUS_BLOCK IoStatusBlock, void *Buffer, unsigned int Length, PLARGE_INTEGER ByteOffset);
+NTSTATUS NtClose(unsigned int Handle);
+NTSTATUS NtOpenFile(unsigned int *FileHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PIO_STATUS_BLOCK IoStatusBlock, unsigned int ShareAccess, unsigned int OpenOptions);
+NTSTATUS NtSetInformationFile(unsigned int FileHandle, PIO_STATUS_BLOCK IoStatusBlock, void *FileInformation, unsigned int Length, FILE_INFORMATION_CLASS FileInformationClass);
+NTSTATUS NtQueryInformationFile(unsigned int FileHandle, PIO_STATUS_BLOCK IoStatusBlock, void *FileInformation, unsigned int Length, FILE_INFORMATION_CLASS FileInformationClass);
+NTSTATUS NtQueryVolumeInformationFile(unsigned int FileHandle, PIO_STATUS_BLOCK IoStatusBlock, void *FileSystemInformation, unsigned int Length, FSINFOCLASS FileSystemInformationClass);
+NTSTATUS NtWaitForSingleObjectEx(unsigned int Handle, unsigned int WaitMode, bool Alertable, PLARGE_INTEGER Timeout);
+
+void RtlEnterCriticalSection(PRTL_CRITICAL_SECTION CriticalSection);
+void RtlLeaveCriticalSection(PRTL_CRITICAL_SECTION CriticalSection);
+unsigned int RtlTryEnterCriticalSection(PRTL_CRITICAL_SECTION CriticalSection);
+void RtlInitializeCriticalSection(PRTL_CRITICAL_SECTION CriticalSection);
+void RtlInitializeCriticalSectionAndSpinCount(PRTL_CRITICAL_SECTION CriticalSection, unsigned int SpinCount);
+
+// Equal to GetSystemTimeAsFile
+NTSTATUS KeQuerySystemTime(PFILETIME CurrentTime);
+
+// TODO: xbox 360
+/*NTSYSAPI
+EXPORTNUM(13)
+DWORD
+NTAPI
+ExCreateThread(
+    IN		PHANDLE pHandle,
+    IN		DWORD dwStackSize,
+    IN		LPDWORD lpThreadId,
+    IN		PVOID apiThreadStartup,
+    IN		LPTHREAD_START_ROUTINE lpStartAddress,
+    IN		LPVOID lpParameter,
+    IN		DWORD dwCreationFlagsMod
+);*/
+
+void RtlInitAnsiString(PSTRING DestinationString, char *SourceString);
+
+void DbgPrint(const char *msg, ...);
+
+
+//Xam
+unsigned int SetFilePointer(unsigned int hFile, long lDistanceToMove, long* lpDistanceToMoveHigh, unsigned int dwMoveMethod);
+
+__attribute__((naked)) void RtlDebugPrintHelper(char *buffer, unsigned int len)
+{
+    __asm__("twui 0, 0x14\n\t"
+            "blr\n\t");
+}
+
+#define MAX_FDS 1024
+unsigned int handle_table[MAX_FDS];
+int next_fd = 3;
+RTL_CRITICAL_SECTION handle_table_lock;
+
+void init_handle_table()
+{
+    RtlInitializeCriticalSection(&handle_table_lock);
+    for (int i = 0; i < MAX_FDS; ++i)
+        handle_table[i] = 0;
+    next_fd = 3;
+}
+
+int handle_to_fd(unsigned int h)
+{
+    RtlEnterCriticalSection(&handle_table_lock);
+    for (int i = next_fd; i < MAX_FDS; ++i)
+    {
+        if (handle_table[i] == 0)
+        {
+            handle_table[i] = h;
+            next_fd = i + 1;
+            RtlLeaveCriticalSection(&handle_table_lock);
+            return i;
+        }
+    }
+    RtlLeaveCriticalSection(&handle_table_lock);
+    return -1;
+}
+
+unsigned int fd_to_handle(int fd)
+{
+    if (fd < 3 || fd >= MAX_FDS)
+        return -1;
+    RtlEnterCriticalSection(&handle_table_lock);
+    unsigned int h = handle_table[fd];
+    RtlLeaveCriticalSection(&handle_table_lock);
+    return h ? h : -1;
+}
+
+void close_fd(int fd)
+{
+    if (fd < 3 || fd >= MAX_FDS)
+        return;
+    RtlEnterCriticalSection(&handle_table_lock);
+    if (handle_table[fd])
+    {
+        handle_table[fd] = 0;
+        if (fd < next_fd)
+            next_fd = fd;
+    }
+    RtlLeaveCriticalSection(&handle_table_lock);
+}
+
+void _exit(int status)
+{
+    DbgPrint("LIBC: exit %d\r\n", status);
+}
+
+int close(int file)
+{
+    DbgPrint("LIBC: Close %d:%d\n", file, fd_to_handle(file));
+    NTSTATUS status = NtClose(fd_to_handle(file));
+    close_fd(file);
+    if (status >= 0)
+        return 0;
+
+    errno = EBADF;
+    DbgPrint("LIBC: Close failed!: %d:%x\r\n", status);
+    return -1;
+}
+
+char **environ;
+int execve(char *name, char **argv, char **env)
+{
+    DbgPrint("LIBC: execve\r\n");
+    return -1;
+}
+int fork()
+{
+    // Not a thing on 360
+    return -1;
+}
+int fstat(int file, struct stat *st)
+{
+    DbgPrint("LIBC: fstat %d\r\n", file);
+    return -1;
+}
+int getpid()
+{
+    // Not a thing on 360
+    return -1;
+}
+
+int isatty(int file)
+{
+    // Not a thing on 360
+    return 0;
+}
+
+int kill(int pid, int sig)
+{
+    // Not a thing on 360
+    return -1;
+}
+int link(char *old, char *new)
+{
+    // Not a thing on 360, there are no symlinks
+    return -1;
+}
+int lseek(int file, int ptr, int dir)
+{
+    DbgPrint("LIBC: lseek %d\r\n", file);
+    unsigned int fileHandle = fd_to_handle(file);
+    if(fileHandle == -1) {
+        errno = EBADF;
+        return -1;
+    }
+
+    return SetFilePointer(fileHandle, ptr, NULL, dir);
+}
 
 int open(const char *name, int flags, ...)
 {
@@ -290,12 +470,29 @@ int open(const char *name, int flags, ...)
 
     unsigned int file = 0;
     NTSTATUS result = NtCreateFile(&file, fileAccess | 0x100080, &o, &ioblock, 0, fileAttributes & 0x7FA7, fileShare, fileCreate, fileAttributes);
-    DbgPrint("NTCreateFile status: %d:%x\r\n", result, result);
-    return file;
+    DbgPrint("NTCreateFile status: %d:%x. Handle: %d\r\n", result, result, file);
+
+    return handle_to_fd(file);
 }
+
 int read(int file, char *ptr, int len)
 {
     DbgPrint("LIBC: read %d\r\n", file);
+    unsigned int fileHandle = fd_to_handle(file);
+    IO_STATUS_BLOCK block;
+    NTSTATUS status = NtReadFile(fileHandle, 0, 0, 0, &block, ptr, len, 0);
+    if (status == 259)
+    { // Operation pending
+        status = NtWaitForSingleObjectEx(fileHandle, 1u, false, 0);
+        if (status < 0)
+        {
+            errno = EINVAL;
+            return -1;
+        }
+    }
+
+    if (status >= 0)
+        return (int)block.Information;
     return -1;
 }
 
@@ -307,17 +504,40 @@ int stat(const char *file, struct stat *st)
 
 clock_t times(struct tms *buf)
 {
-    DbgPrint("LIBC: time\r\n");
+    DbgPrint("LIBC: times\r\n");
     return -1;
 }
+
 int unlink(char *name)
 {
+    STRING filePath;
+    RtlInitAnsiString(&filePath, name);
+    OBJECT_ATTRIBUTES obj;
+    obj.RootDirectory = (void *)-3;
+    obj.Attributes = 64;
+    obj.ObjectName = &filePath;
+    IO_STATUS_BLOCK io;
+    unsigned int handle = 0;
+    char fileInformation[4];
+    fileInformation[0] = 1;
+    NTSTATUS status = NtOpenFile(&handle, 0x10000u, &obj, &io, 7u, 0x4040u);
+    if (status >= 0)
+    {
+        io.Information = 1;
+        status = NtSetInformationFile(handle, &io, fileInformation, 1u, FileDispositionInformation);
+        NtClose(handle);
+        if (status >= 0)
+            return 0;
+    }
     return -1;
 }
+
 int wait(int *status)
 {
+    // Not a thing on 360
     return -1;
 }
+
 int write(int file, char *ptr, int len)
 {
     DbgPrint("LIBC: write %d\r\n", file);
@@ -327,11 +547,35 @@ int write(int file, char *ptr, int len)
         return len;
     }
 
+    unsigned int fileHandle = fd_to_handle(file);
+    IO_STATUS_BLOCK block;
+    NTSTATUS status = NtWriteFile(fileHandle, 0, 0, 0, &block, ptr, len, 0);
+    if (status == 259)
+    { // Operation pending
+        status = NtWaitForSingleObjectEx(fileHandle, 1u, false, 0);
+        if (status < 0)
+        {
+            errno = EINVAL;
+            return -1;
+        }
+    }
+
+    if (status >= 0)
+        return (int)block.Information;
+
     return -1;
 }
+
 int gettimeofday(struct timeval *p, void *z)
 {
-    return -1;
+    LARGE_INTEGER f;
+    NTSTATUS status = KeQuerySystemTime(&f);
+    if (status < 0)
+        return -1;
+
+    p->tv_sec = (f.QuadPart - EPOCH_BIAS) / 10000000;
+    p->tv_usec = p->tv_usec * 1000000;
+    return 0;
 }
 
 struct header
@@ -481,4 +725,9 @@ void *realloc(void *block, size_t size)
 void *_realloc_r(struct _reent *r, void *p, size_t n) _NOTHROW
 {
     return realloc(p, n);
+}
+
+void crtinit()
+{
+    init_handle_table();
 }
