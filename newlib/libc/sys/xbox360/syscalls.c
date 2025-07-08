@@ -6,249 +6,22 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <xecore/xboxkrnl.h>
+#include <xecore/xam.h>
 
-#define PAGE_NOACCESS 0x01
-#define PAGE_READONLY 0x02
-#define PAGE_READWRITE 0x04
-#define PAGE_WRITECOPY 0x08
-#define PAGE_EXECUTE 0x10
-#define PAGE_EXECUTE_READ 0x20
-#define PAGE_EXECUTE_READWRITE 0x40
-#define PAGE_EXECUTE_WRITECOPY 0x80
-#define PAGE_GUARD 0x100
-#define PAGE_NOCACHE 0x200
-#define PAGE_WRITECOMBINE 0x400
-#define PAGE_USER_READONLY 0x1000
-#define PAGE_USER_READWRITE 0x2000
-#define MEM_COMMIT 0x1000
-#define MEM_RESERVE 0x2000
-#define MEM_DECOMMIT 0x4000
-#define MEM_RELEASE 0x8000
-#define MEM_FREE 0x10000
-#define MEM_PRIVATE 0x20000
-#define MEM_RESET 0x80000
-#define MEM_TOP_DOWN 0x100000
-#define MEM_NOZERO 0x800000
-#define MEM_LARGE_PAGES 0x20000000
-#define MEM_HEAP 0x40000000
-#define MEM_16MB_PAGES 0x80000000
 #define EPOCH_BIAS 116444736000000000ULL
 
-#define GENERIC_READ (0x80000000L)
-#define GENERIC_WRITE (0x40000000L)
-#define GENERIC_EXECUTE (0x20000000L)
-#define GENERIC_ALL (0x10000000L)
 #define FTEXT 0x80
-
-#define FILE_SHARE_READ 0x00000001
-#define FILE_SHARE_WRITE 0x00000002
-#define FILE_SHARE_DELETE 0x00000004
-#define CREATE_NEW 1
-#define CREATE_ALWAYS 2
-#define OPEN_EXISTING 3
-#define OPEN_ALWAYS 4
-#define TRUNCATE_EXISTING 5
-
-#define FILE_ATTRIBUTE_READONLY 0x00000001
-#define FILE_ATTRIBUTE_HIDDEN 0x00000002
-#define FILE_ATTRIBUTE_SYSTEM 0x00000004
-#define FILE_ATTRIBUTE_DIRECTORY 0x00000010
-#define FILE_ATTRIBUTE_ARCHIVE 0x00000020
-#define FILE_ATTRIBUTE_DEVICE 0x00000040
-#define FILE_ATTRIBUTE_NORMAL 0x00000080
-#define FILE_ATTRIBUTE_TEMPORARY 0x00000100
-#define FILE_ATTRIBUTE_SPARSE_FILE 0x00000200
-#define FILE_ATTRIBUTE_REPARSE_POINT 0x00000400
-#define FILE_ATTRIBUTE_COMPRESSED 0x00000800
-#define FILE_ATTRIBUTE_OFFLINE 0x00001000
-#define FILE_ATTRIBUTE_NOT_CONTENT_INDEXED 0x00002000
-#define FILE_ATTRIBUTE_ENCRYPTED 0x00004000
-#define FILE_ATTRIBUTE_INTEGRITY_STREAM 0x00008000
-#define FILE_ATTRIBUTE_VIRTUAL 0x00010000
-#define FILE_ATTRIBUTE_NO_SCRUB_DATA 0x00020000
-#define FILE_ATTRIBUTE_EA 0x00040000
-#define FILE_ATTRIBUTE_PINNED 0x00080000
-#define FILE_ATTRIBUTE_UNPINNED 0x00100000
-#define FILE_FLAG_DELETE_ON_CLOSE 0x04000000
-#define DELETE (0x00010000L)
-#define FILE_FLAG_RANDOM_ACCESS 0x10000000
-#define FILE_FLAG_SEQUENTIAL_SCAN 0x08000000
 
 #define _FBINARY 0x10000
 #define O_BINARY _FBINARY
 
-typedef struct _RTL_CRITICAL_SECTION
-{
-
-    union
-    {
-        unsigned long *RawEvent[4];
-    } Synchronization;
-    long LockCount;
-    long RecursionCount;
-    unsigned long OwningThread;
-} RTL_CRITICAL_SECTION, *PRTL_CRITICAL_SECTION;
-
-typedef long NTSTATUS;
-typedef unsigned long ACCESS_MASK;
-typedef struct _STRING
-{
-    unsigned short Length;
-    unsigned short MaximumLength;
-    char *Buffer;
-} STRING, *PSTRING;
-typedef PSTRING POBJECT_STRING;
-
-typedef struct _IO_STATUS_BLOCK
-{
-    union
-    {
-        NTSTATUS Status;
-        void *Pointer;
-    } st;
-    unsigned long Information;
-} IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
-
-typedef struct _FILETIME
-{
-    unsigned int dwHighDateTime;
-    unsigned int dwLowDateTime;
-} FILETIME, *PFILETIME, *LPFILETIME;
-
-typedef struct _OBJECT_ATTRIBUTES
-{
-    void *RootDirectory;
-    POBJECT_STRING ObjectName;
-    unsigned long Attributes;
-} OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
-
-typedef union _LARGE_INTEGER
-{
-    struct
-    {
-        unsigned int HighPart;
-        unsigned int LowPart;
-    };
-    long long QuadPart;
-} LARGE_INTEGER;
-typedef LARGE_INTEGER *PLARGE_INTEGER;
-typedef unsigned char BOOLEAN;
-
-typedef struct _FILE_FS_VOLUME_INFORMATION
-{
-    LARGE_INTEGER VolumeCreationTime;
-    unsigned long VolumeSerialNumber;
-    unsigned long VolumeLabelLength;
-    BOOLEAN SupportsObjects;
-    wchar_t VolumeLabel[1];
-} FILE_FS_VOLUME_INFORMATION, *PFILE_FS_VOLUME_INFORMATION;
-
-typedef struct _FILE_NETWORK_OPEN_INFORMATION
-{
-    LARGE_INTEGER CreationTime;
-    LARGE_INTEGER LastAccessTime;
-    LARGE_INTEGER LastWriteTime;
-    LARGE_INTEGER ChangeTime;
-    LARGE_INTEGER AllocationSize;
-    LARGE_INTEGER EndOfFile;
-    unsigned long FileAttributes;
-    unsigned long Unknown;
-
-} FILE_NETWORK_OPEN_INFORMATION, *PFILE_NETWORK_OPEN_INFORMATION;
-
-typedef struct _FILE_INTERNAL_INFORMATION
-{
-    LARGE_INTEGER IndexNumber;
-} FILE_INTERNAL_INFORMATION, *PFILE_INTERNAL_INFORMATION;
-
-typedef struct __BY_HANDLE_FILE_INFORMATION // sizeof=0x34
-{
-    unsigned int dwFileAttributes;
-    FILETIME ftCreationTime;
-    FILETIME ftLastAccessTime;
-    FILETIME ftLastWriteTime;
-    unsigned int dwVolumeSerialNumber;
-    unsigned int nFileSizeHigh;
-    unsigned int nFileSizeLow;
-    unsigned int nNumberOfLinks;
-    unsigned int nFileIndexHigh;
-    unsigned int nFileIndexLow;
-} _BY_HANDLE_FILE_INFORMATION;
-
-typedef enum _FILE_INFORMATION_CLASS
-{
-    FileDirectoryInformation = 0x1,
-    FileFullDirectoryInformation = 0x2,
-    FileBothDirectoryInformation = 0x3,
-    FileBasicInformation = 0x4, // FILE_BASIC_INFORMATION below
-    FileStandardInformation = 0x5,
-    FileInternalInformation = 0x6,
-    FileEaInformation = 0x7,
-    FileAccessInformation = 0x8,
-    FileNameInformation = 0x9,
-    FileRenameInformation = 0xa,
-    FileLinkInformation = 0xb,
-    FileNamesInformation = 0xc,
-    FileDispositionInformation = 0xd, // use sdk FILE_DISPOSITION_INFO
-    FilePositionInformation = 0xe,    // FILE_POSITION_INFORMATION below
-    FileFullEaInformation = 0xf,
-    FileModeInformation = 0x10,
-    FileAlignmentInformation = 0x11,
-    FileAllInformation = 0x12,
-    FileAllocationInformation = 0x13, // use sdk FILE_ALLOCATION_INFO
-    FileEndOfFileInformation = 0x14,  // use sdk FILE_END_OF_FILE_INFO
-    FileAlternateNameInformation = 0x15,
-    FileStreamInformation = 0x16,
-    FileMountPartitionInformation = 0x17,
-    FileMountPartitionsInformation = 0x18,
-    FilePipeRemoteInformation = 0x19,
-    FileSectorInformation = 0x1a,
-    FileXctdCompressionInformation = 0x1b,
-    FileCompressionInformation = 0x1c,
-    FileObjectIdInformation = 0x1d,
-    FileCompletionInformation = 0x1e,
-    FileMoveClusterInformation = 0x1f,
-    FileIoPriorityInformation = 0x20,
-    FileReparsePointInformation = 0x21,
-    FileNetworkOpenInformation = 0x22,
-    FileAttributeTagInformation = 0x23,
-    FileTrackingInformation = 0x24,
-    FileMaximumInformation = 0x25
-} FILE_INFORMATION_CLASS;
-
-typedef enum _FSINFOCLASS
-{
-    FileFsVolumeInformation = 0x1,
-    FileFsLabelInformation = 0x2,
-    FileFsSizeInformation = 0x3,
-    FileFsDeviceInformation = 0x4,
-    FileFsAttributeInformation = 0x5,
-    FileFsControlInformation = 0x6,
-    FileFsFullSizeInformation = 0x7,
-    FileFsObjectIdInformation = 0x8,
-    FileFsMaximumInformation = 0x9,
-} FSINFOCLASS;
-
-typedef void (*PIO_APC_ROUTINE)(void *ApcContext, PIO_STATUS_BLOCK IoStatusBlock, unsigned long Reserved);
-
-// xboxkrnl
-NTSTATUS NtAllocateVirtualMemory(void **lpAddress, size_t *dwSize, unsigned int flAllocationType, unsigned int flProtect, unsigned int dwMemoryRegionType);
-NTSTATUS NtFreeVirtualMemory(void **BaseAddress, size_t *RegionSize, unsigned int FreeType);
-NTSTATUS NtQueryInformationFile(unsigned int FileHandle, PIO_STATUS_BLOCK IoStatusBlock, void *FileInformation, unsigned int Length, FILE_INFORMATION_CLASS FileInformationClass);
-NTSTATUS NtQueryVolumeInformationFile(unsigned int FileHandle, PIO_STATUS_BLOCK IoStatusBlock, void *FileSystemInformation, unsigned int Length, FSINFOCLASS FileSystemInformationClass);
-
-void RtlEnterCriticalSection(PRTL_CRITICAL_SECTION CriticalSection);
-void RtlLeaveCriticalSection(PRTL_CRITICAL_SECTION CriticalSection);
-unsigned int RtlTryEnterCriticalSection(PRTL_CRITICAL_SECTION CriticalSection);
-void RtlInitializeCriticalSection(PRTL_CRITICAL_SECTION CriticalSection);
-void RtlInitializeCriticalSectionAndSpinCount(PRTL_CRITICAL_SECTION CriticalSection, unsigned int SpinCount);
-
-// Equal to GetSystemTimeAsFile
-NTSTATUS KeQuerySystemTime(PFILETIME CurrentTime);
+typedef uint32_t ACCESS_MASK;
 
 // TODO: xbox 360
 /*NTSYSAPI
@@ -265,25 +38,13 @@ ExCreateThread(
     IN		DWORD dwCreationFlagsMod
 );*/
 
-void RtlInitAnsiString(PSTRING DestinationString, char *SourceString);
-
-void DbgPrint(const char *msg, ...);
-
-// Xam
-unsigned int SetFilePointer(unsigned int hFile, long lDistanceToMove, long *lpDistanceToMoveHigh, unsigned int dwMoveMethod);
-bool CloseHandle(unsigned int hObject);
-unsigned int CreateFileA(char *lpFileName, unsigned int dwDesiredAccess, unsigned int dwShareMode, void *lpSecurityAttributes, unsigned int dwCreationDisposition, unsigned int dwFlagsAndAttributes, void *hTemplateFile);
-bool ReadFile(unsigned int hFile, void *lpBuffer, unsigned int nNumberOfBytesToRead, unsigned int *lpNumberOfBytesRead, void *lpOverlapped);
-bool WriteFile(unsigned int hFile, void *lpBuffer, unsigned int nNumberOfBytesToWrite, unsigned int *lpNumberOfBytesWrite, void *lpOverlapped);
-bool DeleteFileA(char *lpFileName);
-
-__attribute__((naked)) void RtlDebugPrintHelper(char *buffer, unsigned int len)
+__attribute__((naked)) void RtlDebugPrintHelper(char *buffer, uint32_t len)
 {
     __asm__("twui 0, 0x14\n\t"
             "blr\n\t");
 }
 
-bool GetFileInformationByHandle(unsigned int hFile, _BY_HANDLE_FILE_INFORMATION *lpFileInformation)
+bool GetFileInformationByHandle(HANDLE hFile, BY_HANDLE_FILE_INFORMATION *lpFileInformation)
 {
     IO_STATUS_BLOCK io;
     FILE_FS_VOLUME_INFORMATION volumeInfo;
@@ -300,8 +61,12 @@ bool GetFileInformationByHandle(unsigned int hFile, _BY_HANDLE_FILE_INFORMATION 
     if (status < 0)
         return false;
 
-    lpFileInformation->nFileIndexHigh = fileInternalInfo.IndexNumber.HighPart;
-    lpFileInformation->nFileIndexLow = fileInternalInfo.IndexNumber.LowPart;
+    // File index
+    lpFileInformation->nFileIndexHigh =
+        (fileInternalInfo.IndexNumber & 0xFFFFFFFF00000000) >> 32;
+
+    lpFileInformation->nFileIndexLow =
+        fileInternalInfo.IndexNumber & 0x00000000FFFFFFFF;
 
     status = NtQueryInformationFile(hFile, &io, &networkOpenInfo, sizeof(FILE_NETWORK_OPEN_INFORMATION), FileNetworkOpenInformation);
     if (status < 0)
@@ -309,22 +74,39 @@ bool GetFileInformationByHandle(unsigned int hFile, _BY_HANDLE_FILE_INFORMATION 
 
     lpFileInformation->dwFileAttributes = networkOpenInfo.FileAttributes;
 
-    lpFileInformation->ftCreationTime.dwHighDateTime = networkOpenInfo.CreationTime.HighPart;
-    lpFileInformation->ftCreationTime.dwLowDateTime = networkOpenInfo.CreationTime.LowPart;
+    // Creation time
+    lpFileInformation->ftCreationTime.dwHighDateTime =
+        (networkOpenInfo.CreationTime & 0xFFFFFFFF00000000) >> 32;
 
-    lpFileInformation->ftLastAccessTime.dwHighDateTime = networkOpenInfo.LastAccessTime.HighPart;
-    lpFileInformation->ftLastAccessTime.dwLowDateTime = networkOpenInfo.LastAccessTime.LowPart;
+    lpFileInformation->ftCreationTime.dwLowDateTime =
+        networkOpenInfo.CreationTime & 0x00000000FFFFFFFF;
 
-    lpFileInformation->ftLastWriteTime.dwHighDateTime = networkOpenInfo.LastWriteTime.HighPart;
-    lpFileInformation->ftLastWriteTime.dwLowDateTime = networkOpenInfo.LastWriteTime.LowPart;
+    // Last access time
+    lpFileInformation->ftLastAccessTime.dwHighDateTime =
+        (networkOpenInfo.LastAccessTime & 0xFFFFFFFF00000000) >> 32;
 
-    lpFileInformation->nFileSizeHigh = networkOpenInfo.AllocationSize.HighPart;
-    lpFileInformation->nFileSizeLow = networkOpenInfo.AllocationSize.LowPart;
+    lpFileInformation->ftLastAccessTime.dwLowDateTime =
+        networkOpenInfo.LastAccessTime & 0x00000000FFFFFFFF;
+
+    // Last write time
+    lpFileInformation->ftLastWriteTime.dwHighDateTime =
+        (networkOpenInfo.LastWriteTime & 0xFFFFFFFF00000000) >> 32;
+
+    lpFileInformation->ftLastWriteTime.dwLowDateTime =
+        networkOpenInfo.LastWriteTime & 0x00000000FFFFFFFF;
+
+    // File size
+    lpFileInformation->nFileSizeHigh =
+        (networkOpenInfo.AllocationSize & 0xFFFFFFFF00000000) >> 32;
+
+    lpFileInformation->nFileSizeLow =
+        networkOpenInfo.AllocationSize & 0x00000000FFFFFFFF;
+
     return true;
 }
 
 #define MAX_FDS 1024
-unsigned int handle_table[MAX_FDS];
+HANDLE handle_table[MAX_FDS];
 int next_fd = 3;
 RTL_CRITICAL_SECTION handle_table_lock;
 
@@ -336,7 +118,7 @@ void init_handle_table()
     next_fd = 3;
 }
 
-int handle_to_fd(unsigned int h)
+int handle_to_fd(HANDLE h)
 {
     RtlEnterCriticalSection(&handle_table_lock);
     for (int i = next_fd; i < MAX_FDS; ++i)
@@ -353,14 +135,14 @@ int handle_to_fd(unsigned int h)
     return -1;
 }
 
-unsigned int fd_to_handle(int fd)
+HANDLE fd_to_handle(int fd)
 {
     if (fd < 3 || fd >= MAX_FDS)
-        return -1;
+        return (HANDLE)-1;
     RtlEnterCriticalSection(&handle_table_lock);
-    unsigned int h = handle_table[fd];
+    HANDLE h = handle_table[fd];
     RtlLeaveCriticalSection(&handle_table_lock);
-    return h ? h : -1;
+    return h ? h : (HANDLE)-1;
 }
 
 void close_fd(int fd)
@@ -380,6 +162,7 @@ void close_fd(int fd)
 void _exit(int status)
 {
     DbgPrint("LIBC: exit %d\r\n", status);
+    XamLoaderTerminateTitle();
 }
 
 int close(int file)
@@ -404,8 +187,8 @@ int fork()
 //Todo: implement time conversion for create, access, write times
 int fstat(int file, struct stat *st)
 {
-    _BY_HANDLE_FILE_INFORMATION fileInformation;
-    unsigned int fileHandle = fd_to_handle(file);
+    BY_HANDLE_FILE_INFORMATION fileInformation;
+    HANDLE fileHandle = fd_to_handle(file);
     bool success = GetFileInformationByHandle(fileHandle, &fileInformation);
     if (!success)
         return -1;
@@ -450,7 +233,7 @@ int link(char *old, char *new)
 }
 int lseek(int file, int ptr, int dir)
 {
-    unsigned int fileHandle = fd_to_handle(file);
+    HANDLE fileHandle = fd_to_handle(file);
     if (fileHandle == -1)
     {
         errno = EBADF;
@@ -466,11 +249,11 @@ int open(const char *name, int flags, ...)
     va_start(ap, flags);
     int mode = va_arg(ap, int);
     va_end(ap);
-    unsigned int fileFlags = 0;
-    unsigned int fileAccess = 0;
-    unsigned int fileCreate = 0;
-    unsigned int fileShare = FILE_SHARE_READ | FILE_SHARE_WRITE;
-    unsigned int fileAttributes = FILE_ATTRIBUTE_NORMAL;
+    uint32_t fileFlags = 0;
+    uint32_t fileAccess = 0;
+    uint32_t fileCreate = 0;
+    uint32_t fileShare = FILE_SHARE_READ | FILE_SHARE_WRITE;
+    uint32_t fileAttributes = FILE_ATTRIBUTE_NORMAL;
 
     if ((flags & O_BINARY) == 0)
         fileFlags |= FTEXT;
@@ -524,22 +307,22 @@ int open(const char *name, int flags, ...)
         return -1;
     }
 
-    unsigned int file = CreateFileA(name,
-                                    fileAccess,
-                                    fileShare,
-                                    NULL,
-                                    fileCreate,
-                                    fileAttributes,
-                                    NULL);
+    HANDLE file = CreateFileA(name,
+                              fileAccess,
+                              fileShare,
+                              NULL,
+                              fileCreate,
+                              fileAttributes,
+                              NULL);
 
     return handle_to_fd(file);
 }
 
 int read(int file, char *ptr, int len)
 {
-    unsigned int fileHandle = fd_to_handle(file);
+    HANDLE fileHandle = fd_to_handle(file);
 
-    unsigned int bytesRead = 0;
+    uint32_t bytesRead = 0;
     bool success = ReadFile(fileHandle, ptr, len, &bytesRead, 0);
 
     if (success)
@@ -593,8 +376,8 @@ int write(int file, char *ptr, int len)
         return len;
     }
 
-    unsigned int fileHandle = fd_to_handle(file);
-    unsigned int bytesWritten = 0;
+    HANDLE fileHandle = fd_to_handle(file);
+    uint32_t bytesWritten = 0;
     bool success = WriteFile(fileHandle, ptr, len, &bytesWritten, 0);
 
     if (success)
@@ -605,12 +388,10 @@ int write(int file, char *ptr, int len)
 
 int gettimeofday(struct timeval *p, void *z)
 {
-    LARGE_INTEGER f;
-    NTSTATUS status = KeQuerySystemTime(&f);
-    if (status < 0)
-        return -1;
+    int64_t f;
+    KeQuerySystemTime(&f);
 
-    p->tv_sec = (f.QuadPart - EPOCH_BIAS) / 10000000;
+    p->tv_sec = (f - EPOCH_BIAS) / 10000000;
     p->tv_usec = p->tv_usec * 1000000;
     return 0;
 }
@@ -695,7 +476,7 @@ void free(void *block)
 
     if ((char *)block + header->size == (char *)tail + sizeof(header_t))
     {
-        NtFreeVirtualMemory(&header, &header->real_size, MEM_RELEASE);
+        NtFreeVirtualMemory(&header, &header->real_size, MEM_RELEASE, 0);
     }
     else
     {
