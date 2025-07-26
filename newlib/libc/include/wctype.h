@@ -19,12 +19,12 @@ _BEGIN_STD_C
 
 #ifndef _WCTYPE_T
 #define _WCTYPE_T
-typedef int wctype_t;
+typedef unsigned short wctype_t;
 #endif
 
 #ifndef _WCTRANS_T
 #define _WCTRANS_T
-typedef int wctrans_t;
+typedef unsigned short wctrans_t;
 #endif
 
 int	iswalpha (wint_t);

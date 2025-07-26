@@ -174,6 +174,11 @@ extern "C" {
 #define	_ATFILE_SOURCE		1
 #endif
 
+#if defined(_XBOX)
+#undef _POSIX_C_SOURCE
+#define	_POSIX_C_SOURCE		200809L
+#define _GNU_SOURCE 1
+#endif
 /*
  * The following private macros are used throughout the headers to control
  * which symbols should be exposed.  They are for internal use only, as

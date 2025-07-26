@@ -88,7 +88,7 @@ struct	stat
 #define	S_IFSOCK	_IFSOCK
 #define	S_IFIFO		_IFIFO
 
-#ifdef _WIN32
+//#ifdef _WIN32
 /* The Windows header files define _S_ forms of these, so we do too
    for easier portability.  */
 #define _S_IFMT		_IFMT
@@ -99,7 +99,7 @@ struct	stat
 #define _S_IREAD	0000400
 #define _S_IWRITE	0000200
 #define _S_IEXEC	0000100
-#endif
+//#endif
 
 #define	S_IRWXU 	(S_IRUSR | S_IWUSR | S_IXUSR)
 #define		S_IRUSR	0000400	/* read permission, owner */
