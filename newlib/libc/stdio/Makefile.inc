@@ -118,7 +118,8 @@ libc_a_SOURCES += \
 	%D%/vsscanf.c \
 	%D%/wbuf.c \
 	%D%/wbufw.c \
-	%D%/wsetup.c
+	%D%/wsetup.c \
+	%D%/statvfs.c
 
 ## The following are EL/IX level 2 interfaces
 if !ELIX_LEVEL_1
