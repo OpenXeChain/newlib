@@ -161,8 +161,10 @@ void close_fd(int fd)
 
 void _exit(int status)
 {
-    DbgPrint("LIBC: exit %d\r\n", status);
-    XamLoaderTerminateTitle();
+    // XamLoaderTerminateTitle seems more correct, but that always puts us back to
+    // stock dashboard, instead of any custom dashboard which may be set.
+    // Use XamLoaderLaunchTitle instead for better homebrew compatibility.
+    XamLoaderLaunchTitle(NULL, 0);
 }
 
 int close(int file)
@@ -509,8 +511,7 @@ void *calloc(size_t num, size_t nsize)
     return block;
 }
 
-void *
-_calloc_r(struct _reent *ptr, size_t size, size_t len)
+void *_calloc_r(struct _reent *ptr, size_t size, size_t len)
 {
     return calloc(size, len);
 }
