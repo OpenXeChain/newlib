@@ -1,8 +1,10 @@
 #include <stdlib.h>
 
 extern void crtinit(); // newlib xbox 360 specific crt init
-extern int DllMain(unsigned int Handle, unsigned int Reason,
-                   unsigned int Reserved); // Actual entrypoint
+extern void __attribute__((weak)) main();
+extern int __attribute__((weak)) DllMain(unsigned int Handle,
+                                         unsigned int Reason,
+                                         unsigned int Reserved);
 
 typedef void (*func_ptr)(void);
 extern func_ptr __CTOR_LIST__[]; // Compiler generated list of static cxx constructors
@@ -40,5 +42,12 @@ void _start(unsigned int Handle, unsigned int Reason, unsigned int Reserved) {
     initialized = 1;
   }
 
-  DllMain(Handle, Reason, Reserved);
+  // If main == NULL, the main function does not exist.
+  // Assume we're a DLL instead.
+  if (!main) {
+      DllMain(Handle, Reason, Reserved);
+  } else {
+      main();
+      exit(0);
+  }
 }
